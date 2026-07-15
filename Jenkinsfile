@@ -1,5 +1,8 @@
 pipeline {
-    agent none
+    // Dung "agent any" thay vi "agent none" de tranh loi
+    // "No such property: none" do xung dot phien ban plugin Declarative Pipeline.
+    // Moi stage ben duoi van tu khai bao lai agent rieng (docker/any) nen khong anh huong logic.
+    agent any
 
     environment {
         // Tên và tag cho image cuối cùng
@@ -146,4 +149,4 @@ pipeline {
             echo "❌ Pipeline that bai, kiem tra log cac stage o tren."
         }
     }
-}ss
+}
