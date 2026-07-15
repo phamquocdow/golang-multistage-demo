@@ -61,7 +61,6 @@ pipeline {
 
                     echo "==> Build thanh cong, thong tin file binary:"
                     ls -lh app
-                    file app || true
                 '''
                 // Lưu binary lại để dùng ở stage sau nếu cần (optional)
                 stash includes: 'app', name: 'go-binary'
@@ -105,8 +104,11 @@ pipeline {
                     echo ""
                     echo "--> Chi tiet dung luong (byte) bang docker inspect:"
                     SIZE_BYTES=\$(docker inspect -f '{{.Size}}' ${IMAGE_NAME}:${IMAGE_TAG})
-                    SIZE_MB=\$(echo "scale=2; \$SIZE_BYTES/1024/1024" | bc)
-                    echo "Image ${IMAGE_NAME}:${IMAGE_TAG} = \${SIZE_MB} MB (\${SIZE_BYTES} bytes)"
+                    # Tinh MB voi 2 chu so thap phan bang shell arithmetic thuan tuy,
+                    # khong phu thuoc "bc" (co the khong duoc cai san tren agent).
+                    SIZE_MB_INT=\$((SIZE_BYTES / 1024 / 1024))
+                    SIZE_MB_DEC=\$(( (SIZE_BYTES * 100 / 1024 / 1024) % 100 ))
+                    printf "Image ${IMAGE_NAME}:${IMAGE_TAG} = %d.%02d MB (%s bytes)\\n" "\$SIZE_MB_INT" "\$SIZE_MB_DEC" "\$SIZE_BYTES"
 
                     echo "=================================================="
                     echo " So sanh: neu build 1-stage tu golang:1.22 (~900MB-1GB)"
@@ -144,4 +146,4 @@ pipeline {
             echo "❌ Pipeline that bai, kiem tra log cac stage o tren."
         }
     }
-}
+}ss
