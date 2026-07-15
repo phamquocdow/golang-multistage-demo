@@ -31,12 +31,21 @@ pipeline {
             agent {
                 docker {
                     image 'golang:1.22-alpine'
-                    // Cache module Go giữa các lần build để tăng tốc
-                    args '-v go-mod-cache:/go/pkg/mod'
+                    // Cache module Go giữa các lần build để tăng tốc.
+                    // -e HOME=/tmp: fix loi "mkdir /.cache: permission denied"
+                    // vi Jenkins chay container voi user non-root (uid 1000),
+                    // nen HOME mac dinh tro ve "/" khong co quyen ghi.
+                    args '-v go-mod-cache:/go/pkg/mod -e HOME=/tmp'
                 }
             }
             steps {
                 sh '''
+                    # Fix du phong: du da set HOME=/tmp o args, van tro tuong minc
+                    # GOCACHE/GOPATH ve thu muc chac chan co quyen ghi (workspace).
+                    export GOCACHE=$WORKSPACE/.gocache
+                    export GOPATH=$WORKSPACE/.gopath
+                    mkdir -p "$GOCACHE" "$GOPATH"
+
                     echo "==> Phien ban Go dang su dung:"
                     go version
 
