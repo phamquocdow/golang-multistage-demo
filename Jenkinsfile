@@ -128,10 +128,38 @@ pipeline {
             agent any
             steps {
                 sh """
+                    echo "==> Don dep container cu (neu con sot lai tu lan build truoc)..."
+                    docker rm -f ${IMAGE_NAME}-test 2>/dev/null || true
+
                     echo "==> Chay thu container de kiem tra healthz..."
-                    docker run -d --rm --name ${IMAGE_NAME}-test -p 8081:8080 ${IMAGE_NAME}:${IMAGE_TAG}
+                    # KHONG dung -p (publish port ra Docker host that) vi Jenkins
+                    # dang chay trong container rieng (Docker-outside-of-Docker),
+                    # nen "localhost:<port_publish>" tu Jenkins container se
+                    # KHONG the ket noi toi container sibling nay.
+                    # Thay vao do: lay dia chi IP noi bo cua container tren
+                    # Docker network va goi thang toi cong 8080 ben trong.
+                    docker run -d --rm --name ${IMAGE_NAME}-test ${IMAGE_NAME}:${IMAGE_TAG}
                     sleep 3
-                    curl -sf http://localhost:8081/healthz || (echo "Healthcheck that bai" && exit 1)
+
+                    CONTAINER_IP=\$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${IMAGE_NAME}-test)
+                    echo "==> Container IP noi bo: \${CONTAINER_IP}"
+
+                    if [ -z "\${CONTAINER_IP}" ]; then
+                        echo "Khong lay duoc IP container, xem log de debug:"
+                        docker logs ${IMAGE_NAME}-test
+                        docker stop ${IMAGE_NAME}-test
+                        exit 1
+                    fi
+
+                    curl -sf http://\${CONTAINER_IP}:8080/healthz || (
+                        echo "Healthcheck that bai, xem log container:"
+                        docker logs ${IMAGE_NAME}-test
+                        docker stop ${IMAGE_NAME}-test
+                        exit 1
+                    )
+
+                    echo ""
+                    echo "==> Healthcheck OK!"
                     docker stop ${IMAGE_NAME}-test
                 """
             }
